@@ -1,30 +1,47 @@
-class User < ApplicationRecord
-  
-    has_many :tasks
-    has_many :projects, through: :tasks
-  
-  
-    validates :email, :username, :password, presence: true
+class UsersController < ApplicationController
 
 
-    validates :email, uniqueness: true
-  
-  
-    scope :most_projects, -> {joins(:projects).group(:user_id).order("COUNT(*) DESC").first}
-  
-  
-  
-    def self.find_or_create_by_omniauth(auth_hash)
-  
-      self.where(email: auth_hash['info']['email']).first_or_create do |user|
-      
-        user.password = SecureRandom.hex
-    
+  def most_projects
+    @user = User.most_projects
+  end
 
-        user.username = auth_hash['info']['name']
 
-      end
-  
+  def new
+    if logged_in
+      redirect_to projects_path
+      flash[:notice] = "You are already logged in."
+    else
+      @user = User.new
+      render layout: 'sessions'
     end
   end
-  
+
+  def create
+
+    @user = User.new(user_params)
+
+    if @user.save
+
+      session[:user_id] = @user.id
+      redirect_to projects_path
+    else
+      render :new, layout: 'sessions'
+    end
+
+  end
+
+
+
+  # def show
+  #   @user = User.find_by(params[:id])
+  #
+  #   @tasks = @user.tasks
+  # end
+
+  private
+
+
+  def user_params
+    params.require(:user).permit(:username, :email, :password, :password_confirmation)
+  end
+end
